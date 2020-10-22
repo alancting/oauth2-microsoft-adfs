@@ -1,24 +1,29 @@
-<?php namespace Stevenmaguire\OAuth2\Client\Test\Provider;
+<?php 
 
+namespace Alancting\OAuth2\Client\Test\Provider;
+
+use PHPUnit\Framework\TestCase;
 use League\OAuth2\Client\Tool\QueryBuilderTrait;
+use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
+use Alancting\OAuth2\Client\Provider\Microsoft;
 use Mockery as m;
 
-class MicrosoftTest extends \PHPUnit_Framework_TestCase
+class MicrosoftTest extends TestCase
 {
     use QueryBuilderTrait;
 
     protected $provider;
 
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->provider = new \Stevenmaguire\OAuth2\Client\Provider\Microsoft([
+        $this->provider = new Microsoft([
             'clientId' => 'mock_client_id',
             'clientSecret' => 'mock_secret',
             'redirectUri' => 'none',
         ]);
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         m::close();
         parent::tearDown();
@@ -46,7 +51,7 @@ class MicrosoftTest extends \PHPUnit_Framework_TestCase
         $query = ['scope' => implode($scopeSeparator, $options['scope'])];
         $url = $this->provider->getAuthorizationUrl($options);
         $encodedScope = $this->buildQueryString($query);
-        $this->assertContains($encodedScope, $url);
+        $this->assertStringContainsString($encodedScope, $url);
     }
 
     public function testGetAuthorizationUrl()
@@ -74,7 +79,7 @@ class MicrosoftTest extends \PHPUnit_Framework_TestCase
         $customResourceOwnerUrl = uniqid();
         $token = m::mock('League\OAuth2\Client\Token\AccessToken');
 
-        $this->provider = new \Stevenmaguire\OAuth2\Client\Provider\Microsoft([
+        $this->provider = new Microsoft([
             'clientId' => 'mock_client_id',
             'clientSecret' => 'mock_secret',
             'redirectUri' => 'none',
@@ -84,11 +89,11 @@ class MicrosoftTest extends \PHPUnit_Framework_TestCase
         ]);
 
         $authUrl = $this->provider->getAuthorizationUrl();
-        $this->assertContains($customAuthUrl, $authUrl);
+        $this->assertStringContainsString($customAuthUrl, $authUrl);
         $tokenUrl = $this->provider->getBaseAccessTokenUrl([]);
-        $this->assertContains($customTokenUrl, $tokenUrl);
+        $this->assertStringContainsString($customTokenUrl, $tokenUrl);
         $resourceOwnerUrl = $this->provider->getResourceOwnerDetailsUrl($token);
-        $this->assertContains($customResourceOwnerUrl, $resourceOwnerUrl);
+        $this->assertStringContainsString($customResourceOwnerUrl, $resourceOwnerUrl);
 
     }
 
@@ -158,6 +163,10 @@ class MicrosoftTest extends \PHPUnit_Framework_TestCase
     {
         $message = uniqid();
 
+        $this->expectException(IdentityProviderException::class);
+        $this->expectExceptionCode(500);
+        $this->expectExceptionMessage($message);
+        
         $postResponse = m::mock('Psr\Http\Message\ResponseInterface');
         $postResponse->shouldReceive('getBody')->andReturn('{"error": {"code": "request_token_expired", "message": "'.$message.'"}}');
         $postResponse->shouldReceive('getHeader')->andReturn(['content-type' => 'json']);

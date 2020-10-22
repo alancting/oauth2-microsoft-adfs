@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<container xmlns="http://symfony.com/schema/dic/services" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
+  <services>
+    <!-- <service id="alancting.microsoft.adfs.provider" class="Alancting\OAuth2\Client\Provider\Adfs\AdfsProvider" public="false">
+      <argument type="service" id="service_container" />
+    </service> -->
+    <service id="alancting.microsoft.user_provider" class="Alancting\OAuth2\Client\Security\User\MicrosoftOAuthUserProvider" autowire="true" />
+    <service id="alancting.microsoft.adfs.authenticator" class="Alancting\OAuth2\Client\Security\Authenticator\AdfsAuthenticator" autowire="true"></service>
+    <service id="alancting.microsoft.azure.ad.authenticator" class="Alancting\OAuth2\Client\Security\Authenticator\AzureAdAuthenticator" autowire="true"></service>
+
+    <service id="alancting.microsoft.adfs.client" class="Alancting\OAuth2\Client\Client\AdfsClient" autowire="true" autoconfigure="true"></service>
+  </services>
+</container>
