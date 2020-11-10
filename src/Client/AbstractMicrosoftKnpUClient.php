@@ -59,7 +59,7 @@ abstract class AbstractMicrosoftKnpUClient extends OAuth2Client
     ) {
         $params = [
             'refresh_token' => $refreshToken->getToken(),
-            'scope' => array_merge($this->getOAuth2Provider()->getDefaultScopes(), $scopes),
+            'scope' => implode(' ', array_merge($this->getOAuth2Provider()->getDefaultScopes(), $scopes)),
         ];
 
         return $this->getOAuth2Provider()->getAccessToken(
