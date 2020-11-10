@@ -1,6 +1,6 @@
 <?php
 
-namespace Alancting\OAuth2\Client\ResourceOwner;
+namespace Alancting\OAuth2\OpenId\Client\ResourceOwner;
 
 use League\OAuth2\Client\Provider\ResourceOwnerInterface;
 

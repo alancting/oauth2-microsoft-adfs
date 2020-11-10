@@ -1,23 +1,23 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Security\User;
+namespace Alancting\OAuth2\OpenId\Client\Security\User;
 
 use Symfony\Component\Security\Core\User\UserInterface;
 
 class MicrosoftOAuthUser implements UserInterface
 {
-    private $username;
-    private $roles;
+    private $_username;
+    private $_roles;
 
     public function __construct($username, array $roles)
     {
-        $this->username = $username;
-        $this->roles = $roles;
+        $this->_username = $username;
+        $this->_roles = $roles;
     }
 
     public function getRoles()
     {
-        return $this->roles;
+        return $this->_roles;
     }
 
     public function getPassword(): ?string
@@ -32,7 +32,7 @@ class MicrosoftOAuthUser implements UserInterface
 
     public function getUsername(): string
     {
-        return $this->username;
+        return $this->_username;
     }
 
     public function eraseCredentials()

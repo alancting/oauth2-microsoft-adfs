@@ -1,9 +1,9 @@
 <?php
 
-namespace Alancting\OAuth2\Client;
+namespace Alancting\OAuth2\OpenId\Client;
 
 use Symfony\Component\HttpKernel\Bundle\Bundle;
-use Alancting\OAuth2\Client\DependencyInjection\MicrosoftExtension;
+use Alancting\OAuth2\OpenId\Client\DependencyInjection\MicrosoftExtension;
 
 class MicrosoftBundle extends Bundle
 {

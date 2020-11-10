@@ -1,6 +1,6 @@
 <?php
 
-namespace Alancting\OAuth2\Client\DependencyInjection;
+namespace Alancting\OAuth2\OpenId\Client\DependencyInjection;
 
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;

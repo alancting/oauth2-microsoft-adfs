@@ -1,13 +1,13 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Security\Token;
+namespace Alancting\OAuth2\OpenId\Client\Security\Token;
 
 class MicrosoftRefreshToken
 {
     private $token;
     private $expire;
 
-    public function __construct($token, $expire_in)
+    public function __construct(string $token, $expire_in)
     {
         $this->token = $token;
         $this->expire = time() + $expire_in;
@@ -27,7 +27,7 @@ class MicrosoftRefreshToken
         if ($timestamp >= $this->expire) {
             return true;
         }
-        
+
         return false;
     }
 }

@@ -1,24 +1,23 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Security\User;
+namespace Alancting\OAuth2\OpenId\Client\Security\User;
 
-use Alancting\OAuth2\Client\Security\User\MicrosoftOAuthUser;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 class MicrosoftOAuthUserProvider implements UserProviderInterface
 {
-    private $roles;
+    private $_roles;
 
     public function __construct(array $roles = ['ROLE_USER', 'ROLE_OAUTH_USER'])
     {
-        $this->roles = $roles;
+        $this->_roles = $roles;
     }
 
     public function loadUserByUsername($username): UserInterface
     {
-        return new MicrosoftOAuthUser($username, $this->roles);
+        return new MicrosoftOAuthUser($username, $this->_roles);
     }
 
     public function refreshUser(UserInterface $user): UserInterface
@@ -26,8 +25,8 @@ class MicrosoftOAuthUserProvider implements UserProviderInterface
         if (!$user instanceof MicrosoftOAuthUser) {
             throw new UnsupportedUserException(sprintf('Instances of "%s" are not supported.', \get_class($user)));
         }
-        $user = $this->loadUserByUsername($user->getUsername());
-        return $user;
+
+        return $this->loadUserByUsername($user->getUsername());
     }
 
     public function supportsClass($class): bool

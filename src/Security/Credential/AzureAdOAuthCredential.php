@@ -1,15 +1,18 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Security\Credential;
+namespace Alancting\OAuth2\OpenId\Client\Security\Credential;
 
-use Alancting\OAuth2\Client\Security\Credential\MicrosoftOAuthCredential;
-use \InvalidArgumentException;
-use \UnexpectedValueException;
+use Alancting\Microsoft\JWT\AzureAd\AzureAdConfiguration;
 
 class AzureAdOAuthCredential extends MicrosoftOAuthCredential
 {
     protected function getIdTokenJWTClass()
     {
         return 'Alancting\Microsoft\JWT\AzureAd\AzureAdIdTokenJWT';
+    }
+
+    protected function isSupportConfigurationClass($configuration)
+    {
+        return ($configuration instanceof AzureAdConfiguration) ? true : false;
     }
 }

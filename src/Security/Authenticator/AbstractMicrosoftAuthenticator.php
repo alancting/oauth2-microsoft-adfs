@@ -1,12 +1,11 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Security\Authenticator;
+namespace Alancting\OAuth2\OpenId\Client\Security\Authenticator;
 
 use KnpU\OAuth2ClientBundle\Security\Authenticator\SocialAuthenticator;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Security;
-use Psr\Log\LoggerInterface;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -15,28 +14,12 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-use Alancting\OAuth2\Client\Security\Token\MicrosoftRefreshToken;
-use Alancting\OAuth2\Client\Security\Token\MicrosoftAdfsOAuthCredential;
-use Alancting\OAuth2\Client\Security\Credential\MicrosoftOAuthCredential;
-
-use Alancting\Microsoft\JWT\AzureAd\AzureAdConfiguration as Configuration;
-use Alancting\Microsoft\JWT\AzureAd\AzureAdAccessTokenJWT as AccessTokenJWT;
-use Alancting\Microsoft\JWT\AzureAd\AzureAdIdTokenJWT as IdTokenJWT;
-
 abstract class AbstractMicrosoftAuthenticator extends SocialAuthenticator
 {
-    abstract protected function getLogoutPath();
-    abstract protected function getConnectPath();
-  
-    abstract protected function getClientName();
-  
-    abstract protected function getOAuthCredentialKey();
-    
     abstract protected function getOAuthCredentialClass();
-    
+
     private $clientRegistry;
     private $router;
-    private $logger;
     private $security;
 
     private $oAuthCredential;
@@ -44,257 +27,195 @@ abstract class AbstractMicrosoftAuthenticator extends SocialAuthenticator
     public function __construct(
         ClientRegistry $clientRegistry,
         RouterInterface $router,
-        Security $security,
-        LoggerInterface $logger
+        Security $security
     ) {
-        $logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
-
         $this->clientRegistry = $clientRegistry;
         $this->router = $router;
-        $this->logger = $logger;
         $this->security = $security;
     }
-    
+
     public function supports(Request $request)
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
-
-        if ($request->attributes->get('_route') === $this->getLogoutPath()) {
+        if ($request->attributes->get('_route') === $this->_getLogoutRouteName()) {
             return false;
         }
-        
-        if ($request->attributes->get('_route') === $this->getConnectPath()) {
-            $this->_loadSecurityMicrosoftOAuthCredentialIfExists();
+
+        // Handle any request when credentials exists (credentials checking will be handle later)
+        $oAuthCredential = $this->_getMicrosoftClient()->getOAuthCredentialBySecurity($this->security);
+        if ($oAuthCredential) {
+            $this->oAuthCredential = $oAuthCredential;
+
             return true;
         }
-        
-        if ($this->_securityMicrosoftOAuthCredentialExists()) {
-            $this->_loadSecurityMicrosoftOAuthCredentialIfExists();
-            // if ($this->oAuthCredential->isExpired()) {
+
+        // Handle when connect path
+        if ($request->attributes->get('_route') === $this->_getConnectRouteName()) {
             return true;
-            // }
         }
-        
+
         return false;
     }
-    
+
     public function getCredentials(Request $request)
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
-        
         $state = $request->query->get('state');
         $code = $request->query->get('code');
-        
+
+        // When state and code is returned, we assumed it's called from Adfs / Azure Ad
         if ((isset($state) && isset($code))) {
-            $this->logger->debug(sprintf('*** [%s] %s: fetch from code with scope: %s ... ***', get_called_class(), __FUNCTION__, print_r($this->_getMicrosoftClientProvider()->getScopes(), 1)));
-            
             $accessToken = $this->fetchAccessToken(
                 $this->_getMicrosoftClient(),
                 [
-                  'state' => $state,
-                  'scope' => $this->_getMicrosoftClientProvider()->getScopes(),
+                    'state' => $state,
+                    'scope' => $this->_getMicrosoftClientProvider()->getScopes(),
                 ]
             );
+            if (empty($this->oAuthCredential)) {
+                $this->oAuthCredential = $this->_getMicrosoftOAuthCredential(
+                    $accessToken,
+                    $this->_getMicrosoftClientProvider()->getScopes(),
+                    $this->_getMicrosoftClientProvider()->getOtherResourceScopes()
+                );
 
-            if (!$this->_securityExists()) {
-                $this->logger->debug(sprintf('*** [%s] %s: set main token ***', get_called_class(), __FUNCTION__));
-                $this->oAuthCredential = $this->_getMicrosoftOAuthCredential($accessToken, $this->_getMicrosoftClientProvider()->getOtherResourceScopes());
+                if ($this->oAuthCredential->isRefreshTokenUsable()) {
+                    $pendingScoptToken = $this->_getMicrosoftClient()->fetchPendingOtherResourceAccessTokensByRefreshTokenByCredential($this->oAuthCredential);
+                    $this->oAuthCredential->setOtherResourceOAuthCredentialsByTokens($pendingScoptToken);
+                }
             } else {
                 $otherResourceCredentials = $this->oAuthCredential->getOtherResourceCredentials();
-                
+
                 $targetScope = false;
                 if (isset(($accessToken->getValues())['scope'])) {
                     $targetScope = ($accessToken->getValues())['scope'];
                 }
-                
+
                 if (count($otherResourceCredentials) && $targetScope
                     && array_key_exists($targetScope, $otherResourceCredentials)
                 ) {
-                    $this->logger->debug(sprintf('*** [%s] %s: set sub %s token ***', get_called_class(), __FUNCTION__, $targetScope));
                     $this->oAuthCredential->setOtherResourceOAuthCredential(
                         $targetScope,
-                        $this->_getMicrosoftOAuthCredential($accessToken)
+                        $this->_getMicrosoftOAuthCredential($accessToken, $targetScope)
                     );
                 } else {
-                    $this->logger->debug(sprintf('*** [%s] %s: update main token ***', get_called_class(), __FUNCTION__));
                     $this->oAuthCredential->update(
-                        $this->_getMicrosoftConfiguration(),
+                        $this->_getMicrosoftClient()->getMicrosoftConfiguration(),
                         $accessToken
                     );
                 }
             }
         } else {
-            if ($this->oAuthCredential->canRefreshToken()) {
+            if (!empty($this->oAuthCredential) && $this->oAuthCredential->isRefreshTokenUsable()) {
                 if ($this->oAuthCredential->isExpired()) {
-                    $this->logger->debug(sprintf('*** [%s] %s: update expired main token (refresh token) ***', get_called_class(), __FUNCTION__));
-
-                    $accessToken = $this->fetchAccessTokenByRefreshToken($this->oAuthCredential->getRefreshToken()->getToken());
-                    $this->oAuthCredential->update($this->_getMicrosoftConfiguration(), $accessToken);
+                    $accessToken = $this->_getMicrosoftClient()->fetchAccessTokenByRefreshToken($this->oAuthCredential->getRefreshToken());
+                    $this->oAuthCredential->update($this->_getMicrosoftClient()->getMicrosoftConfiguration(), $accessToken);
                 }
 
-                $expiredCredentialScopes = $this->oAuthCredential->getExpiredResourceCredentialScopes();
-                if (count($expiredCredentialScopes)) {
-                    foreach ($expiredCredentialScopes as $expiredCredentialScope) {
-                        $this->logger->debug(sprintf('*** [%s] %s: set expired sub %s token (refresh token) ***', get_called_class(), __FUNCTION__, $expiredCredentialScope));
-                      
-                        $accessToken = $this->fetchAccessTokenByRefreshToken(
-                            $this->oAuthCredential->getRefreshToken()->getToken(),
-                            ['openid', $expiredCredentialScope]
-                        );
-                        $this->oAuthCredential->setOtherResourceOAuthCredential(
-                            $expiredCredentialScope,
-                            $this->_getMicrosoftOAuthCredential($accessToken)
-                        );
-                    }
-                }
+                $pendingScoptToken = $this->_getMicrosoftClient()->fetchPendingOtherResourceAccessTokensByRefreshTokenByCredential($this->oAuthCredential);
+                $this->oAuthCredential->setOtherResourceOAuthCredentialsByTokens($pendingScoptToken);
             }
         }
+
         return $this->oAuthCredential;
     }
-    
+
     public function checkCredentials($credential, UserInterface $user): bool
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
-        
         if ($credential->isExpired()
-            && $credential->haveRefreshToken()
-            && !$credential->canRefreshToken()
+            && !$credential->isRefreshTokenUsable()
         ) {
             return false;
         }
+
         return true;
     }
-    
+
     public function getUser($credential, UserProviderInterface $userProvider)
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
-        
-        
         $key = $this->_getMicrosoftClientProvider()->getUserKey();
         $username = $credential->getIdTokenJWT()->get($key);
-        $this->logger->debug(
-            sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__),
-            ['key' => $key, 'username' => $username]
-        );
+
         return $userProvider->loadUserByUsername($username);
     }
-    
+
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, $providerKey)
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
+        $token->setAttribute($this->_getMicrosoftClient()->getClientKey(), $this->oAuthCredential);
 
-        $token->setAttribute($this->getOAuthCredentialKey(), $this->oAuthCredential);
-      
-        $missingScopes = $this->oAuthCredential->getMissingOtherResourceCredentialScopes();
-        $expiredCredentialScopes = $this->oAuthCredential->getExpiredResourceCredentialScopes();
-        
-        $this->logger->debug(
-            sprintf('*** [%s] %s: missing %s, expired: %s scope(s) ***', get_called_class(), __FUNCTION__, count($missingScopes), count($expiredCredentialScopes))
-        );
-        
-        if (count($missingScopes)+count($expiredCredentialScopes)) {
-            return $this->redirectToAuthorization(
+        $pendingScopes =  $this->oAuthCredential->getPendingOtherResourceCredentialScopes();
+
+        if (count($pendingScopes)) {
+            return $this->_getMicrosoftClient()->startAuthorization(
                 $request,
-                ['openid', (array_merge($missingScopes, $expiredCredentialScopes))[0]]
+                [$pendingScopes[0]]
             );
         }
-        
-        if ($this->shouldStartValidate($request)) {
+
+        if ($this->_shouldStartValidate($request)) {
             $state = $request->query->get('state');
-            // $redirectUri = !empty($state) ? $state : $request->getPathInfo();
             if (!empty($state)) {
                 return new RedirectResponse($state);
-            } else {
-                return null;
             }
-        } else {
+
             return null;
         }
+
+        return null;
     }
-    
+
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception)
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
         return $this->start($request, $exception);
     }
-    
+
     public function start(Request $request, AuthenticationException $authException = null)
     {
-        $this->logger->debug(sprintf('*** [%s] %s ***', get_called_class(), __FUNCTION__));
-        
-        if ($this->shouldStartValidate($request)) {
-            return $this->redirectToAuthorization(
-                $request,
-                $this->_getMicrosoftClientProvider()->getScopes()
-            );
+        if ($this->_shouldStartValidate($request)) {
+            return $this->_getMicrosoftClient()->startAuthorization($request);
         }
     }
-    
-    protected function fetchAccessTokenByRefreshToken(string $refreshToken, array $options = [])
-    {
-        return $this->_getMicrosoftClient()->fetchAccessTokenByRefreshToken($refreshToken, $options);
-    }
 
-    protected function redirectToAuthorization(
-        Request $request,
-        array $scopes = []
-    ) {
-        $state = !empty($request->query->get('state')) ? $request->query->get('state') : $request->getPathInfo();
-        
-        return $this->_getMicrosoftClient()->redirect(
-            $scopes,
-            ['state' => $state]
-        );
-    }
-    
-    private function _getMicrosoftOAuthCredential($accessToken, $scopes = [])
+    private function _getMicrosoftOAuthCredential($accessToken, $scope, $otherResourceScopes = [])
     {
         $className = $this->getOAuthCredentialClass();
-        return new $className($this->_getMicrosoftConfiguration(), $accessToken, $scopes);
-    }
 
-    private function _securityExists()
-    {
-        return ($this->security->getToken() !== null && $this->security->getUser() !== null);
-    }
-
-    private function _securityMicrosoftOAuthCredentialExists()
-    {
-        return $this->_securityExists() && isset(($this->security->getToken()->getAttributes())[$this->getOAuthCredentialKey()]);
-    }
-
-    private function _loadSecurityMicrosoftOAuthCredentialIfExists()
-    {
-        if ($this->_securityMicrosoftOAuthCredentialExists()) {
-            $this->oAuthCredential = ($this->security->getToken()->getAttributes())[$this->getOAuthCredentialKey()];
-        }
+        return new $className($this->_getMicrosoftClient()->getMicrosoftConfiguration(), $accessToken, $scope, $otherResourceScopes);
     }
 
     private function _getMicrosoftClient()
     {
-        return $this->clientRegistry->getClient($this->getClientName());
+        return $this->clientRegistry->getClient('microsoft_openid');
     }
 
     private function _getMicrosoftClientProvider()
     {
         return $this->_getMicrosoftClient()->getOAuth2Provider();
     }
-    
-    private function _getMicrosoftConfiguration()
+
+    private function _shouldStartValidate(Request $request)
     {
-        return $this->_getMicrosoftClientProvider()->getMicrosoftConfiguration();
-    }
-    
-    private function shouldStartValidate(Request $request)
-    {
+        $isConnectPath = ($request->attributes->get('_route') === $this->_getConnectRouteName());
+        $isSecuirtyExists = (
+            $this->security->getToken() !== null &&
+            $this->security->getUser() !== null);
+        $isCredentialRequireAndCannotRefresh = (
+            $this->oAuthCredential !== null &&
+            $this->oAuthCredential->isExpired() &&
+            !$this->oAuthCredential->isRefreshTokenUsable());
+
         return (
-            $request->attributes->get('_route') === $this->getConnectPath() ||
-            !$this->_securityExists() ||
-            (
-                $this->oAuthCredential !== null &&
-                $this->oAuthCredential->isExpired() &&
-                !$this->oAuthCredential->canRefreshToken()
-            )
+            $isConnectPath ||
+            !$isSecuirtyExists ||
+            $isCredentialRequireAndCannotRefresh
         );
+    }
+
+    private function _getConnectRouteName()
+    {
+        return 'microsoft_openid_connect';
+    }
+
+    private function _getLogoutRouteName()
+    {
+        return 'microsoft_openid_logout';
     }
 }

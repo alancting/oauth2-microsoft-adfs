@@ -1,58 +1,34 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Client;
+namespace Alancting\OAuth2\OpenId\Client\Client;
 
-use KnpU\OAuth2ClientBundle\Client\OAuth2Client;
-
-use League\OAuth2\Client\Token\AccessToken;
-use Alancting\OAuth2\Client\Provider\Adfs\AdfsResourceOwner;
 use League\OAuth2\Client\Provider\AbstractProvider;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Security;
 
-class AbstractMicrosoftClient extends OAuth2Client
+abstract class AbstractMicrosoftClient extends AbstractMicrosoftKnpUClient
 {
-    private $security;
-    
-    public function __construct(AbstractProvider $provider, RequestStack $requestStack, Security $security)
+    private $_security;
+
+    public function __construct(AbstractProvider $provider, RequestStack $requestStack, Security $security = null)
     {
         parent::__construct($provider, $requestStack);
-        $this->security = $security;
-    }
-    
-    /**
-     * @return AdfsResourceOwner|\League\OAuth2\Client\Provider\ResourceOwnerInterface
-     */
-    public function fetchUserFromToken(AccessToken $accessToken)
-    {
-        return parent::fetchUserFromToken($accessToken);
+        $this->_security = $security;
     }
 
-    /**
-     * @return AdfsResourceOwner|\League\OAuth2\Client\Provider\ResourceOwnerInterface
-     */
-    public function fetchUser()
+    public function getLogoutUrl()
     {
-        return parent::fetchUser();
+        $idToken = '';
+        $credential = $this->getOAuthCredential();
+        if ($credential) {
+            $idToken = $credential->getIdTokenJWT()->getJWT();
+        }
+
+        return $this->getOAuth2Provider()->getLogoutUrl($idToken);
     }
 
-    /**
-     * @return AdfsResourceOwner|\League\OAuth2\Client\Provider\ResourceOwnerInterface
-     */
-    public function fetchAccessTokenByRefreshToken(string $refreshToken, array $options = [])
+    public function getOAuthCredential()
     {
-        $params = [
-            'refresh_token' => $refreshToken
-        ];
-        
-        return $this->getOAuth2Provider()->getAccessToken(
-            'refresh_token',
-            array_merge($params, $options)
-        );
-    }
-
-    protected function getSecurity()
-    {
-        return $this->security;
+        return $this->getOAuthCredentialBySecurity($this->_security);
     }
 }

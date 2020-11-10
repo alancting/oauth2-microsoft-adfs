@@ -1,9 +1,9 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Provider;
+namespace Alancting\OAuth2\OpenId\Client\Provider;
 
-use Alancting\OAuth2\Client\Provider\AbstractMicrosoftProvider;
-use Alancting\OAuth2\Client\ResourceOwner\AdfsResourceOwner;
+use Alancting\OAuth2\OpenId\Client\Provider\AbstractMicrosoftProvider;
+use Alancting\OAuth2\OpenId\Client\ResourceOwner\AdfsResourceOwner;
 
 use Alancting\Microsoft\JWT\Adfs\AdfsConfiguration;
 
@@ -24,7 +24,7 @@ class AdfsProvider extends AbstractMicrosoftProvider
     
     protected function getResourceOwnernClass()
     {
-        return 'Alancting\OAuth2\Client\ResourceOwner\AdfsResourceOwner';
+        return 'Alancting\OAuth2\OpenId\Client\ResourceOwner\AdfsResourceOwner';
     }
 
     protected function getMicrosoftConfigurationClass()

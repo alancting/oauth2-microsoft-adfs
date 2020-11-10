@@ -1,5 +1,12 @@
-/build
-/vendor
+vendor
+phpunit.phar
+phpunit.phar.asc
 composer.phar
 composer.lock
-.DS_Store
+
+coverage
+coverage/*
+
+build
+
+.coveralls.yml

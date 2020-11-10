@@ -1,13 +1,13 @@
 <?php
 
-namespace Alancting\OAuth2\Client\Client;
+namespace Alancting\OAuth2\OpenId\Client\Client;
 
-use Alancting\OAuth2\Client\Client;
+use Alancting\OAuth2\OpenId\Client\Client\AbstractMicrosoftClient;
 
 class AdfsClient extends AbstractMicrosoftClient
 {
-    public function debug()
+    public function getClientKey()
     {
-        return '[AdfsClient] debug...';
+        return 'adfs_oauth';
     }
 }
