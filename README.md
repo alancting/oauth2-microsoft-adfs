@@ -28,7 +28,18 @@ composer require alancting/oauth2-microsoft-openid
 
 ## Get Start
 
-### Step1 - Configure the provider
+### Step 1 - Include in the bundles
+
+```php
+# config/bundles.php
+return [
+    Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => ['all' => true],
+    ...
+    Alancting\OAuth2\OpenId\Client\MicrosoftBundle::class => ['all' => true],
+];
+```
+
+### Step 2 - Configure the provider
 
 We make use of the configuration from [knpuniversity/oauth2-client-bundle](https://github.com/knpuniversity/oauth2-client-bundle#configuration)
 
@@ -81,7 +92,7 @@ knpu_oauth2_client:
           - "%env(AZURE_AD_API_RESOURCE_2)%"
 ```
 
-### Step2 - Configure the use authenticator
+### Step 3 - Configure the use authenticator
 
 #### Adfs
 
@@ -115,7 +126,7 @@ secure_firewall:
           - alancting.microsoft.azure_ad.authenticator
 ```
 
-### Step3 - Register pathsserver
+### Step 4 - Register pathsserver
 
 We need to register two path to communicate with the OAuth2 server
 
