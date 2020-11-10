@@ -98,32 +98,42 @@ knpu_oauth2_client:
 
 ```yaml
 # config/packages/security.yaml
-secure_firewall:
-    pattern: ^/([a-z])
-      anonymous: ~
-      logout:
-        path: microsoft_openid_logout
-        success_handler: App\Utility\LogoutHandler
-      guard:
-        provider: microsoft_openid_oauth
-        authenticators:
-          - alancting.microsoft.adfs.authenticator
+security:
+  providers:
+    microsoft_openid_oauth:
+      id: alancting.microsoft.user_provider
+  firewalls:
+    secure_firewall:
+        pattern: ^/([a-z])
+          anonymous: ~
+          logout:
+            path: microsoft_openid_logout
+            success_handler: App\Utility\LogoutHandler
+          guard:
+            provider: microsoft_openid_oauth
+            authenticators:
+              - alancting.microsoft.adfs.authenticator
 ```
 
 #### Azure Ad
 
 ```yaml
 # config/packages/security.yaml
-secure_firewall:
-    pattern: ^/([a-z])
-      anonymous: ~
-      logout:
-        path: microsoft_openid_logout
-        success_handler: App\Utility\LogoutHandler
-      guard:
-        provider: microsoft_openid_oauth
-        authenticators:
-          - alancting.microsoft.azure_ad.authenticator
+security:
+  providers:
+    microsoft_openid_oauth:
+      id: alancting.microsoft.user_provider
+  firewalls:
+    secure_firewall:
+        pattern: ^/([a-z])
+          anonymous: ~
+          logout:
+            path: microsoft_openid_logout
+            success_handler: App\Utility\LogoutHandler
+          guard:
+            provider: microsoft_openid_oauth
+            authenticators:
+              - alancting.microsoft.azure_ad.authenticator
 ```
 
 ### Step 4 - Register pathsserver
@@ -144,7 +154,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 
-class AzureAdController extends AbstractController
+class AdfsController extends AbstractController
 {
     /**
      * After going to microsoft, you're redirected back here
@@ -213,7 +223,10 @@ class AzureAdController extends AbstractController
 
 ### Usage
 
-After user login, you can get the login credentials
+After user login,
+
+- You can get the login credentials
+- User is logged in with the roles: **ROLE_USER** and **ROLE_OAUTH_USER**
 
 #### Adfs
 
