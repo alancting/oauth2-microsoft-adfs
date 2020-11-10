@@ -10,7 +10,7 @@ Microsoft Azure Active Directory (Azure AD), Microsoft Active Directory Federati
 
 - Login with Adfs / AzureAd
   - All token handling is wrapped in the guard authenticator
-- Easu to get the stored tokens from a registered service
+- Easy to get the stored tokens from a registered service
 
 This bundle integrates with [knpuniversity/oauth2-client-bundle](https://github.com/knpuniversity/oauth2-client-bundle)
 
@@ -30,7 +30,7 @@ composer require alancting/oauth2-microsoft-openid
 
 ### Step1 - Configure the provider
 
-We make use of the configuration of [knpuniversity/oauth2-client-bundle](https://github.com/knpuniversity/oauth2-client-bundle#configuration)
+We make use of the configuration from [knpuniversity/oauth2-client-bundle](https://github.com/knpuniversity/oauth2-client-bundle#configuration)
 
 #### Adfs
 
