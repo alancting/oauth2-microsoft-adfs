@@ -1,6 +1,6 @@
 {
   "name": "alancting/oauth2-microsoft-openid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Microsoft Azure Active Directory (Azure AD), Microsoft Active Directory Federation Services (ADFS) OpenId Integration for Symfony",
   "type": "symfony-bundle",
   "license": "MIT",

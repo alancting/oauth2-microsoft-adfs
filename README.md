@@ -28,7 +28,18 @@ composer require alancting/oauth2-microsoft-openid
 
 ## Get Start
 
-### Step1 - Configure the provider
+### Step 1 - Include in the bundles
+
+```php
+# config/bundles.php
+return [
+    Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => ['all' => true],
+    ...
+    Alancting\OAuth2\OpenId\Client\MicrosoftBundle::class => ['all' => true],
+];
+```
+
+### Step 2 - Configure the provider
 
 We make use of the configuration from [knpuniversity/oauth2-client-bundle](https://github.com/knpuniversity/oauth2-client-bundle#configuration)
 
@@ -81,41 +92,51 @@ knpu_oauth2_client:
           - "%env(AZURE_AD_API_RESOURCE_2)%"
 ```
 
-### Step2 - Configure the use authenticator
+### Step 3 - Configure the use authenticator
 
 #### Adfs
 
 ```yaml
 # config/packages/security.yaml
-secure_firewall:
-    pattern: ^/([a-z])
-      anonymous: ~
-      logout:
-        path: microsoft_openid_logout
-        success_handler: App\Utility\LogoutHandler
-      guard:
-        provider: microsoft_openid_oauth
-        authenticators:
-          - alancting.microsoft.adfs.authenticator
+security:
+  providers:
+    microsoft_openid_oauth:
+      id: alancting.microsoft.user_provider
+  firewalls:
+    secure_firewall:
+        pattern: ^/([a-z])
+          anonymous: ~
+          logout:
+            path: microsoft_openid_logout
+            success_handler: App\Utility\LogoutHandler
+          guard:
+            provider: microsoft_openid_oauth
+            authenticators:
+              - alancting.microsoft.adfs.authenticator
 ```
 
 #### Azure Ad
 
 ```yaml
 # config/packages/security.yaml
-secure_firewall:
-    pattern: ^/([a-z])
-      anonymous: ~
-      logout:
-        path: microsoft_openid_logout
-        success_handler: App\Utility\LogoutHandler
-      guard:
-        provider: microsoft_openid_oauth
-        authenticators:
-          - alancting.microsoft.azure_ad.authenticator
+security:
+  providers:
+    microsoft_openid_oauth:
+      id: alancting.microsoft.user_provider
+  firewalls:
+    secure_firewall:
+        pattern: ^/([a-z])
+          anonymous: ~
+          logout:
+            path: microsoft_openid_logout
+            success_handler: App\Utility\LogoutHandler
+          guard:
+            provider: microsoft_openid_oauth
+            authenticators:
+              - alancting.microsoft.azure_ad.authenticator
 ```
 
-### Step3 - Register pathsserver
+### Step 4 - Register pathsserver
 
 We need to register two path to communicate with the OAuth2 server
 
@@ -133,7 +154,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 
-class AzureAdController extends AbstractController
+class AdfsController extends AbstractController
 {
     /**
      * After going to microsoft, you're redirected back here
@@ -202,7 +223,10 @@ class AzureAdController extends AbstractController
 
 ### Usage
 
-After user login, you can get the login credentials
+After user login,
+
+- You can get the login credentials
+- User is logged in with the roles: **ROLE_USER** and **ROLE_OAUTH_USER**
 
 #### Adfs
 
