@@ -16,7 +16,7 @@ abstract class AbstractMicrosoftClient extends AbstractMicrosoftKnpUClient
         $this->_security = $security;
     }
 
-    public function getLogoutUrl()
+    public function getLogoutUrl(string $redirect_uri = null)
     {
         $idToken = '';
         $credential = $this->getOAuthCredential();
@@ -24,7 +24,7 @@ abstract class AbstractMicrosoftClient extends AbstractMicrosoftKnpUClient
             $idToken = $credential->getIdTokenJWT()->getJWT();
         }
 
-        return $this->getOAuth2Provider()->getLogoutUrl($idToken);
+        return $this->getOAuth2Provider()->getLogoutUrl($idToken, $redirect_uri);
     }
 
     public function getOAuthCredential()
